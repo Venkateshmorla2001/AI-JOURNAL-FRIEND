@@ -13,6 +13,14 @@
       body {
         font-family: 'Poppins', sans-serif;
       }
+      @keyframes flash {
+        50% {
+          box-shadow: 0 0 10px 4px var(--color-primary-muted);
+        }
+      }
+      .animate-flash {
+        animation: flash 0.5s ease-in-out;
+      }
       @media print {
         body, html {
           background: #ffffff !important;

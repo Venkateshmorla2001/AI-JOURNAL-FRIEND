@@ -18,6 +18,7 @@ export type AuthState = {
 
 export type AppSettings = {
   isMusicEnabled: boolean;
+  userName?: string;
 };
 
 export type AIAnalysis = {
@@ -40,6 +41,7 @@ export enum Emotion {
 export type ChatMessage = {
   role: 'user' | 'model';
   text: string;
+  sources?: { web: { uri: string; title: string } }[];
 };
 
 export type ChatHistory = Record<string, ChatMessage[]>; // Key is 'YYYY-MM-DD'

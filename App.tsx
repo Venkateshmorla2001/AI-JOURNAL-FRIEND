@@ -121,14 +121,14 @@ export default function App() {
         case 'journal':
             return <JournalView entries={journalEntries} setEntries={setJournalEntries} />;
         case 'chatbot':
-            return <ChatbotView />;
+            return <ChatbotView settings={settings} />;
         case 'calendar':
             return <CalendarView entries={journalEntries} calendarData={calendarData} setCalendarData={setCalendarData} />;
         case 'settings':
             return <SettingsView settings={settings} setSettings={setSettings} currentThemeName={currentThemeName} onThemeChange={setCurrentThemeName} />;
         case 'home':
         default:
-            return <HomeScreen setView={setActiveView} />;
+            return <HomeScreen setView={setActiveView} settings={settings} setSettings={setSettings} />;
     }
   };
 

@@ -72,15 +72,87 @@ export const analyzeJournalEntry = async (text: string, imageBase64?: string): P
     }
 };
 
-export const getChatInstance = (history?: ChatMessage[]) => {
-    return ai.chats.create({
-        model: 'gemini-2.5-flash',
-        history: history?.map(msg => ({
-            role: msg.role,
-            parts: [{ text: msg.text }]
-        })),
-        config: {
-          systemInstruction: "You are a highly empathetic and supportive AI companion. Your name is Aura. Your purpose is to listen to the user, understand their feelings, and offer kind, insightful, and constructive advice. Avoid being clinical; be warm and conversational. Use emojis to convey tone where appropriate. Keep your responses concise but meaningful.",
-        },
-    });
+export const getChatResponse = async (history: ChatMessage[], newMessage: string, userName?: string): Promise<string> => {
+    try {
+        const chat = ai.chats.create({
+            model: 'gemini-2.5-flash-lite',
+            history: history.map(msg => ({
+                role: msg.role,
+                parts: [{ text: msg.text }]
+            })),
+            config: {
+              systemInstruction: `You are a highly empathetic and supportive AI companion. Your name is Honest friend. The user's name is ${userName || 'friend'}. Your purpose is to listen to the user, understand their feelings, and offer kind, insightful, and constructive advice. Avoid being clinical; be warm and conversational. Use emojis to convey tone where appropriate. Keep your responses concise but meaningful. Address the user by their name occasionally.`,
+            },
+        });
+        const response = await chat.sendMessage({ message: newMessage });
+        return response.text;
+    } catch (error) {
+        console.error("Error getting chat response:", error);
+        return "I'm having a little trouble connecting right now. Please try again in a moment.";
+    }
+}
+
+export const getComplexChatResponse = async (history: ChatMessage[], newMessage: string, userName?: string): Promise<string> => {
+    try {
+        const chat = ai.chats.create({
+            model: 'gemini-2.5-pro',
+            history: history.map(msg => ({
+                role: msg.role,
+                parts: [{ text: msg.text }]
+            })),
+            config: {
+                systemInstruction: `You are a highly empathetic and supportive AI companion. Your name is Honest friend. The user's name is ${userName || 'friend'}. You are in 'Deep Thought' mode, designed to tackle complex problems. Provide thorough, well-reasoned, and deeply insightful responses. Break down complex topics into understandable parts. Address the user by their name.`,
+                thinkingConfig: { thinkingBudget: 32768 }
+            },
+        });
+        const response = await chat.sendMessage({ message: newMessage });
+        return response.text;
+    } catch (error) {
+        console.error("Error getting complex chat response:", error);
+        return "I'm having a little trouble with that complex thought. Could we try simplifying it?";
+    }
+}
+
+export const getGroundedChatResponse = async (history: ChatMessage[], newMessage: string, userName?: string): Promise<{ text: string, sources: any[] }> => {
+    try {
+        const chat = ai.chats.create({
+            model: 'gemini-2.5-flash',
+            history: history.map(msg => ({
+                role: msg.role,
+                parts: [{ text: msg.text }]
+            })),
+            config: {
+              systemInstruction: `You are a helpful AI assistant named Honest friend. The user's name is ${userName || 'friend'}. Use Google Search to answer questions about recent events or when you need up-to-date information. Always cite your sources.`,
+              tools: [{googleSearch: {}}],
+            },
+        });
+        const response = await chat.sendMessage({ message: newMessage });
+        const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+        return { text: response.text, sources };
+    } catch (error) {
+        console.error("Error getting grounded chat response:", error);
+        return { text: "I couldn't search for that information. Please check my connection.", sources: [] };
+    }
+}
+
+export const generateImageForEntry = async (prompt: string): Promise<string | null> => {
+    try {
+        const response = await ai.models.generateImages({
+            model: 'imagen-4.0-generate-001',
+            prompt: `Create a vibrant, artistic, and emotionally resonant image that visually represents the following journal entry: "${prompt}"`,
+            config: {
+              numberOfImages: 1,
+              outputMimeType: 'image/jpeg',
+              aspectRatio: '1:1',
+            },
+        });
+
+        if (response.generatedImages && response.generatedImages.length > 0) {
+            return response.generatedImages[0].image.imageBytes;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error generating image:", error);
+        return null;
+    }
 }

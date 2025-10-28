@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { JournalEntry, CalendarData, CalendarLabel } from '../types';
 import { EMOJIS, STICKERS } from '../constants';
+import JournalEntryCard from './JournalEntryCard';
 
 interface CalendarViewProps {
   entries: JournalEntry[];
@@ -82,6 +83,7 @@ const LabelEditorModal = ({ date, existingLabel, onSave, onClose }: { date: Date
 const CalendarView: React.FC<CalendarViewProps> = ({ entries, calendarData, setCalendarData }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [viewingEntry, setViewingEntry] = useState<JournalEntry | null>(null);
 
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
@@ -128,14 +130,50 @@ const CalendarView: React.FC<CalendarViewProps> = ({ entries, calendarData, setC
       }
       setSelectedDate(null);
   };
+  
+  const handleDayClick = (date: Date | null) => {
+    if (!date) return;
+    const dayKey = formatDateKey(date);
+    const entry = entries.find(e => e.id === dayKey);
+    if (entry) {
+        setViewingEntry(entry);
+    } else {
+        setSelectedDate(date);
+    }
+  };
+  
+  const handleEditLabelForEntry = () => {
+    if (viewingEntry) {
+        const entryDate = new Date(viewingEntry.date);
+        setSelectedDate(entryDate);
+        setViewingEntry(null);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col p-4 md:p-6 gap-6">
         {selectedDate && <LabelEditorModal date={selectedDate} existingLabel={calendarData[formatDateKey(selectedDate)]} onSave={handleSaveLabel} onClose={() => setSelectedDate(null)} />}
+        {viewingEntry && ReactDOM.createPortal(
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setViewingEntry(null)}>
+                <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                    <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl shadow-2xl p-4">
+                        <JournalEntryCard entry={viewingEntry} />
+                        <div className="mt-4 flex justify-end gap-4">
+                            <button onClick={handleEditLabelForEntry} className="text-sm bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-colors">
+                                Edit Label
+                            </button>
+                            <button onClick={() => setViewingEntry(null)} className="text-sm bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold px-4 py-2 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>,
+            document.getElementById('modal-root')!
+        )}
       <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-6 border border-[var(--color-border)]">
         <div className="flex justify-between items-center mb-4">
             <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-white/10 transition-colors">&lt;</button>
-            {/* FIX: Corrected typo from toLocaleDate_string to toLocaleDateString */}
             <h2 className="text-2xl font-bold text-white">{currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
             <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-white/10 transition-colors">&gt;</button>
         </div>
@@ -152,7 +190,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ entries, calendarData, setC
                 return (
                     <div 
                         key={date?.toString() ?? `empty-${index}`} 
-                        onClick={() => date && setSelectedDate(date)}
+                        onClick={() => handleDayClick(date)}
                         className={`h-24 rounded-lg flex flex-col justify-start items-start p-1.5 transition-colors cursor-pointer relative ${date ? 'bg-black/20 hover:bg-white/10' : 'bg-transparent'}`}
                     >
                         {date && <>
@@ -161,7 +199,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ entries, calendarData, setC
                             {label && <div className="absolute inset-0 flex items-center justify-center text-4xl">
                                 {label.type === 'image' ? 
                                     <img src={label.value} className="w-full h-full object-cover rounded-md" alt="Calendar Label" /> 
-                                    : /* FIX: Simplified className logic as label.type cannot be 'image' in this branch, resolving the TS error. */
+                                    :
                                     <span className={'opacity-70'}>{label.value}</span>}
                             </div>}
                         </>}

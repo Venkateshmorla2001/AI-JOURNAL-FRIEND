@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { AppSettings } from '../types';
 
 type View = 'home' | 'journal' | 'chatbot' | 'calendar' | 'settings';
 
 interface HomeScreenProps {
   setView: (view: View) => void;
+  settings: AppSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
 }
 
 const NavCard = ({ icon, title, description, onClick }: { icon: string; title: string; description: string; onClick: () => void; }) => (
@@ -17,7 +20,17 @@ const NavCard = ({ icon, title, description, onClick }: { icon: string; title: s
   </button>
 );
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ setView }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ setView, settings, setSettings }) => {
+  const [nameInput, setNameInput] = useState('');
+
+  const handleNameSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (nameInput.trim()) {
+      setSettings(prev => ({ ...prev, userName: nameInput.trim() }));
+      setNameInput('');
+    }
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -28,8 +41,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setView }) => {
   return (
     <div className="h-full flex flex-col justify-center items-center p-4 md:p-8">
       <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold text-white">{getGreeting()}</h1>
-        <p className="text-lg text-[var(--color-accent)] mt-2">Ready to reflect and connect?</p>
+        {settings.userName ? (
+            <>
+                <h1 className="text-5xl font-bold text-white">{getGreeting()}, {settings.userName}!</h1>
+                <p className="text-lg text-[var(--color-accent)] mt-2">Ready to reflect and connect?</p>
+            </>
+        ) : (
+            <>
+                <h1 className="text-5xl font-bold text-white mb-4">{getGreeting()}</h1>
+                <form onSubmit={handleNameSave} className="w-full max-w-sm mx-auto">
+                <label htmlFor="name-input" className="text-lg text-[var(--color-accent)] mb-2 block">What should I call you?</label>
+                <div className="flex gap-2">
+                    <input
+                    id="name-input"
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    placeholder="Enter your name..."
+                    className="w-full px-4 py-2 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all text-white"
+                    />
+                    <button type="submit" className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                    Save
+                    </button>
+                </div>
+                </form>
+            </>
+        )}
       </div>
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
         <NavCard
@@ -40,8 +77,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setView }) => {
         />
         <NavCard
           icon="💬"
-          title="Aura Chat"
-          description="Talk with your empathetic AI companion, Aura."
+          title="Honest Friend Chat"
+          description="Talk with your empathetic AI companion, Honest friend."
           onClick={() => setView('chatbot')}
         />
         <NavCard

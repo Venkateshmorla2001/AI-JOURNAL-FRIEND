@@ -18,7 +18,7 @@ declare global {
 
 import React, { useState, useRef, useEffect } from 'react';
 import { JournalEntry } from '../types';
-import { analyzeJournalEntry } from '../services/geminiService';
+import { analyzeJournalEntry, generateImageForEntry } from '../services/geminiService';
 import JournalEntryCard from './JournalEntryCard';
 import LoadingSpinner from './LoadingSpinner';
 import EmojiStickerPicker from './EmojiStickerPicker';
@@ -41,7 +41,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 const MicIcon = ({ isListening }: { isListening: boolean }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isListening ? 'text-[var(--color-primary)] animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isListening ? 'text-red-400 animate-pulse' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v4m-4-4a4 4 0 018 0m-4-7a2 2 0 012 2v2a2 2 0 01-2 2" />
     </svg>
 );
@@ -56,6 +56,8 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [locationError, setLocationError] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [justTranscribed, setJustTranscribed] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -191,8 +193,12 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
     recognition.onresult = (event) => {
         const lastResult = event.results[event.results.length - 1];
         if (lastResult.isFinal) {
-            const newTranscript = lastResult[0].transcript;
-            setCurrentContent(prev => (prev ? prev.trim() + ' ' : '') + newTranscript.trim());
+            const newTranscript = lastResult[0].transcript.trim();
+            if (newTranscript) {
+                setCurrentContent(prev => (prev ? prev.trim() + ' ' : '') + newTranscript);
+                setJustTranscribed(true);
+                setTimeout(() => setJustTranscribed(false), 500);
+            }
         }
     };
 
@@ -228,6 +234,26 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
   const handleExport = () => {
     window.print();
   };
+  
+  const handleGenerateImage = async () => {
+    if (!currentContent.trim()) {
+        alert("Please write something in your journal before generating an image.");
+        return;
+    }
+    setIsGeneratingImage(true);
+    const generatedBase64 = await generateImageForEntry(currentContent);
+    if (generatedBase64) {
+        const dataUrl = `data:image/jpeg;base64,${generatedBase64}`;
+        setImage({
+            file: new File([], "generated.jpg"),
+            base64: generatedBase64,
+            preview: dataUrl,
+        });
+    } else {
+        alert("Sorry, I couldn't generate an image for that entry. Please try again.");
+    }
+    setIsGeneratingImage(false);
+  };
 
   return (
     <div className="h-full flex flex-col p-4 md:p-6 gap-6">
@@ -243,16 +269,29 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
           ref={textareaRef}
           value={currentContent}
           onChange={(e) => setCurrentContent(e.target.value)}
-          placeholder="Start writing or tap the mic to speak..."
-          className="w-full h-40 p-4 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all text-white resize-none"
+          placeholder={isListening ? "Listening... your words will appear here." : "Start writing or tap the mic to speak..."}
+          className={`w-full h-40 p-4 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none transition-all text-white resize-none ${isListening ? 'ring-2 ring-red-500/70' : 'focus:ring-2 focus:ring-[var(--color-primary)]'} ${justTranscribed ? 'animate-flash' : ''}`}
         />
         <div className="mt-4 flex justify-between items-center">
           <div className="flex gap-2 relative">
              <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
-             <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-full hover:bg-white/10 transition-colors" title="Add Image">📷</button>
-             <button onClick={handleGetLocation} className="p-2 rounded-full hover:bg-white/10 transition-colors" title="Add Location">{location ? '📍' : '🌐'}</button>
-             <button onClick={() => setEmojiPickerOpen(p => !p)} className="p-2 rounded-full hover:bg-white/10 transition-colors" title="Add Emoji">😊</button>
-             <button onClick={handleToggleListening} className="p-2 rounded-full hover:bg-white/10 transition-colors" title="Voice Typing"><MicIcon isListening={isListening} /></button>
+             <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-full text-gray-400 hover:bg-white/10 transition-colors" title="Add Image">📷</button>
+             <button onClick={handleGetLocation} className="p-2 rounded-full text-gray-400 hover:bg-white/10 transition-colors" title="Add Location">{location ? '📍' : '🌐'}</button>
+             <button onClick={() => setEmojiPickerOpen(p => !p)} className="p-2 rounded-full text-gray-400 hover:bg-white/10 transition-colors" title="Add Emoji">😊</button>
+             <button 
+                onClick={handleToggleListening} 
+                className={`p-2 rounded-full transition-all duration-300 ${isListening ? 'bg-red-500/20' : 'hover:bg-white/10'}`} 
+                title={isListening ? "Stop recording" : "Start voice typing"}>
+                    <MicIcon isListening={isListening} />
+             </button>
+             <button
+                onClick={handleGenerateImage}
+                disabled={isGeneratingImage}
+                className="p-2 rounded-full text-gray-400 hover:bg-white/10 transition-colors flex items-center disabled:opacity-50 disabled:cursor-wait"
+                title="Generate Image with AI"
+             >
+                {isGeneratingImage ? <LoadingSpinner size="sm" /> : '🎨'}
+             </button>
              {isEmojiPickerOpen && <EmojiStickerPicker onSelect={handleEmojiSelect} onClose={() => setEmojiPickerOpen(false)} />}
           </div>
           <div className="text-sm text-gray-400">
