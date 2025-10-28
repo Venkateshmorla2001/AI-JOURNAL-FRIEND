@@ -1,66 +1,164 @@
+import React, { useState, useMemo } from 'react';
+import { AuthState } from '../types';
+import { POSITIVE_QUOTES } from '../constants';
 
-import React, { useState } from 'react';
-import { APP_PASSWORD } from '../constants';
-
-interface LoginScreenProps {
-  onLoginSuccess: () => void;
+interface AuthScreenProps {
+  authState: AuthState;
+  setAuthState: React.Dispatch<React.SetStateAction<AuthState>>;
+  onAuthSuccess: () => void;
 }
 
 const LockIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-cyan-300 mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-[var(--color-accent)] mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
     </svg>
 );
 
-
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
+const AuthScreen: React.FC<AuthScreenProps> = ({ authState, setAuthState, onAuthSuccess }) => {
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  
+  const getInitialView = () => {
+    if (authState.protection === 'unset') return 'welcome';
+    if (authState.protection === 'enabled') return 'login';
+    return 'welcome';
+  };
+  const [view, setView] = useState(getInitialView);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const quote = useMemo(() => POSITIVE_QUOTES[Math.floor(Math.random() * POSITIVE_QUOTES.length)], []);
+
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === APP_PASSWORD) {
-      onLoginSuccess();
+    if (password.trim() === '') {
+      setError('Password field cannot be empty.');
+      return;
+    }
+    if (password === authState.password) {
+      if (rememberMe) {
+        setAuthState(prev => ({ ...prev, rememberMe: true }));
+      }
+      onAuthSuccess();
     } else {
       setError('Incorrect password. Please try again.');
       setPassword('');
+    }
+  };
+  
+  const handleSetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.trim() === '') {
+        setError('Password cannot be empty.');
+        return;
+    }
+    if (newPassword.length < 4) {
+      setError('Password must be at least 4 characters long.');
+      return;
+    }
+    setAuthState({ protection: 'enabled', password: newPassword });
+    onAuthSuccess();
+  };
+
+  const handleNoPassword = () => {
+    setAuthState({ protection: 'disabled' });
+    onAuthSuccess();
+  };
+
+  const renderContent = () => {
+    switch (view) {
+      case 'login':
+        return (
+          <>
+            <div className="flex flex-col items-center">
+              <LockIcon />
+              <h1 className="text-3xl font-bold mb-2 text-center">Welcome Back</h1>
+              <p className="text-[var(--color-accent)] opacity-80 mb-8 text-center">Your journal is waiting.</p>
+            </div>
+            <form onSubmit={handleLogin}>
+              <div className="mb-4">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                  placeholder="Enter password"
+                  className="w-full px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+                />
+              </div>
+               <div className="mb-6 flex items-center">
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-transparent"
+                />
+                <label htmlFor="rememberMe" className="ml-2 block text-sm text-[var(--color-text-secondary)]">
+                  Remember Me
+                </label>
+              </div>
+              {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
+              <button type="submit" className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 hover:brightness-110">
+                Unlock Journal
+              </button>
+            </form>
+          </>
+        );
+      case 'setPassword':
+        return (
+          <>
+            <div className="flex flex-col items-center">
+              <LockIcon />
+              <h1 className="text-3xl font-bold mb-2 text-center">Create a Password</h1>
+              <p className="text-[var(--color-accent)] opacity-80 mb-8 text-center">Secure your thoughts and memories.</p>
+            </div>
+            <form onSubmit={handleSetPassword}>
+              <div className="mb-4">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => { setNewPassword(e.target.value); setError(''); }}
+                  placeholder="Choose a password"
+                  className="w-full px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+                />
+              </div>
+              {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
+              <button type="submit" className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 hover:brightness-110">
+                Save & Enter
+              </button>
+            </form>
+          </>
+        );
+      case 'welcome':
+      default:
+        return (
+          <>
+            <div className="flex flex-col items-center text-center">
+              <h1 className="text-4xl font-bold mb-3">Welcome to Your Space</h1>
+              <p className="text-[var(--color-accent)] opacity-90 mb-8 text-lg">{quote}</p>
+              <div className="w-full space-y-4">
+                 <button onClick={() => setView('setPassword')} className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 hover:brightness-110">
+                    Secure My Journal
+                 </button>
+                 <button onClick={handleNoPassword} className="w-full bg-transparent border border-[var(--color-secondary-muted)] text-white font-medium py-3 px-4 rounded-lg transition-colors hover:bg-white/10">
+                    Continue without Password
+                 </button>
+              </div>
+            </div>
+          </>
+        );
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 text-white border border-white/20">
-          <div className="flex flex-col items-center">
-            <LockIcon />
-            <h1 className="text-3xl font-bold mb-2 text-center">Your Private Journal</h1>
-            <p className="text-cyan-200 mb-8 text-center">Protected for your eyes only.</p>
-          </div>
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => {
-                    setPassword(e.target.value);
-                    setError('');
-                }}
-                placeholder="Enter password"
-                className="w-full px-4 py-3 bg-black/30 rounded-lg border border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
-              />
-            </div>
-            {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105"
-            >
-              Unlock Journal
-            </button>
-          </form>
+        <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-2xl shadow-2xl p-8 text-white border border-[var(--color-border)]">
+          {renderContent()}
         </div>
       </div>
     </div>
   );
 };
 
-export default LoginScreen;
+export default AuthScreen;

@@ -1,7 +1,31 @@
-
 import { Emotion } from './types';
 
-export const APP_PASSWORD = 'secure_password_123';
+export const POSITIVE_QUOTES = [
+  "You are awesome, and you're capable of amazing things.",
+  "Your potential is endless. Go do what you were created to do.",
+  "Believe you can and you're halfway there. You've got this!",
+  "The only person you are destined to become is the person you decide to be.",
+  "Every day may not be good, but there is something good in every day. Find it and smile.",
+  "You are a star, don't let anyone dull your sparkle!"
+];
+
+export const EMOJIS = ['😄', '😊', '😍', '😢', '😠', '🤔', '🙏', '🎉', '❤️', '✨', '🔥', '👍', '💡', '🥳', '😴', '😎', '✈️', '💼', '🏋️', '🧘', '🎂', '🎁', '🏖️', '⛰️'];
+
+export const STICKERS: { name: string; emoji: string }[] = [
+    { name: 'Workout', emoji: '💪' },
+    { name: 'Work', emoji: '💼' },
+    { name: 'Travel', emoji: '✈️' },
+    { name: 'Relax', emoji: '🧘' },
+    { name: 'Party', emoji: '🎉' },
+    { name: 'Birthday', emoji: '🎂' },
+    { name: 'Date Night', emoji: '❤️' },
+    { name: 'Meeting', emoji: '👥' },
+    { name: 'Coffee', emoji: '☕' },
+    { name: 'Shopping', emoji: '🛍️' },
+    { name: 'Reading', emoji: '📚' },
+    { name: 'Gaming', emoji: '🎮' },
+];
+
 
 export const EMOTION_COLORS: Record<Emotion, string> = {
   [Emotion.Joy]: 'border-yellow-400 bg-yellow-400/10',
