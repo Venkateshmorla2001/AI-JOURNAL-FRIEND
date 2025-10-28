@@ -44,7 +44,7 @@ const LabelEditorModal = ({ date, existingLabel, onSave, onClose }: { date: Date
 
     return ReactDOM.createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
-            <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <div className="bg-[var(--color-bg-secondary)] backdrop-blur-xl border border-[var(--color-border)] rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
                 <h2 className="text-xl font-bold mb-4">Label for {date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</h2>
                 <div className="flex border-b border-[var(--color-border)] mb-4">
                     <button onClick={() => setActiveTab('emoji')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'emoji' ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]' : 'text-gray-400'}`}>Emoji</button>
@@ -159,7 +159,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ entries, calendarData, setC
         {viewingEntry && ReactDOM.createPortal(
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setViewingEntry(null)}>
                 <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                    <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl shadow-2xl p-4">
+                    <div className="bg-[var(--color-bg-secondary)] backdrop-blur-xl border border-[var(--color-border)] rounded-xl shadow-2xl p-4">
                         <JournalEntryCard entry={viewingEntry} />
                         <div className="mt-4 flex justify-end gap-4">
                             <button onClick={handleEditLabelForEntry} className="text-sm bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-colors">
@@ -174,7 +174,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ entries, calendarData, setC
             </div>,
             document.getElementById('modal-root')!
         )}
-      <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-6 border border-[var(--color-border)]">
+      <div className="bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-xl p-6 border border-[var(--color-border)]">
         <div className="flex justify-between items-center mb-4">
             <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-white/10 transition-colors">&lt;</button>
             <h2 className="text-2xl font-bold text-white">{currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>

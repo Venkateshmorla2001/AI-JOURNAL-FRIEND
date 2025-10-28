@@ -1,8 +1,7 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIAnalysis, Emotion, ChatMessage } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const analysisSchema = {
     type: Type.OBJECT,
@@ -76,7 +75,6 @@ export const analyzeJournalEntry = async (text: string, imageBase64?: string): P
 export const getChatResponse = async (history: ChatMessage[], newMessage: string, userName?: string): Promise<string> => {
     try {
         const chat = ai.chats.create({
-            // FIX: Use 'gemini-flash-lite-latest' instead of 'gemini-2.5-flash-lite'.
             model: 'gemini-flash-lite-latest',
             history: history.map(msg => ({
                 role: msg.role,

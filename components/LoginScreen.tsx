@@ -1,16 +1,6 @@
-
 import React, { useState, useMemo } from 'react';
 import { AuthState } from '../types';
 import { POSITIVE_QUOTES } from '../constants';
-
-// FIX: Added JSX type definition for model-viewer to resolve compilation error.
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'model-viewer': any;
-    }
-  }
-}
 
 interface AuthScreenProps {
   authState: AuthState;
@@ -27,8 +17,10 @@ const LockIcon = () => (
 const AuthScreen: React.FC<AuthScreenProps> = ({ authState, setAuthState, onAuthSuccess }) => {
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [passwordHint, setPasswordHint] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [showHint, setShowHint] = useState(false);
   
   const getInitialView = () => {
     if (authState.protection === 'unset') return 'welcome';
@@ -66,13 +58,23 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ authState, setAuthState, onAuth
       setError('Password must be at least 4 characters long.');
       return;
     }
-    setAuthState({ protection: 'enabled', password: newPassword });
+    setAuthState({ protection: 'enabled', password: newPassword, passwordHint: passwordHint.trim() });
     onAuthSuccess();
   };
 
   const handleNoPassword = () => {
     setAuthState({ protection: 'disabled' });
     onAuthSuccess();
+  };
+  
+  const handleForgotPassword = () => {
+    const isConfirmed = window.confirm(
+        "Are you sure? This action is irreversible and will delete all your journal entries, chats, and settings. Your password cannot be recovered."
+    );
+    if (isConfirmed) {
+        localStorage.clear();
+        window.location.reload();
+    }
   };
 
   const renderContent = () => {
@@ -95,22 +97,37 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ authState, setAuthState, onAuth
                   className="w-full px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
                 />
               </div>
-               <div className="mb-6 flex items-center">
-                <input
-                  id="rememberMe"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-transparent"
-                />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm text-[var(--color-text-secondary)]">
-                  Remember Me
-                </label>
+               <div className="mb-6 flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="rememberMe"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-transparent"
+                  />
+                  <label htmlFor="rememberMe" className="ml-2 block text-sm text-[var(--color-text-secondary)]">
+                    Remember Me
+                  </label>
+                </div>
+                {authState.passwordHint && (
+                    <div>
+                        <button type="button" onClick={() => setShowHint(p => !p)} className="text-xs text-[var(--color-accent)] hover:underline">
+                            {showHint ? 'Hide' : 'Show'} Hint
+                        </button>
+                    </div>
+                )}
               </div>
+              {showHint && authState.passwordHint && <p className="text-sm text-center text-[var(--color-text-secondary)] bg-black/20 p-2 rounded-md mb-4">Hint: {authState.passwordHint}</p>}
               {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
               <button type="submit" className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 hover:brightness-110">
                 Unlock Journal
               </button>
+              <div className="text-center mt-4">
+                <button type="button" onClick={handleForgotPassword} className="text-xs text-[var(--color-text-secondary)] hover:text-white hover:underline">
+                    Forgot Password?
+                </button>
+              </div>
             </form>
           </>
         );
@@ -122,17 +139,26 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ authState, setAuthState, onAuth
               <h1 className="text-3xl font-bold mb-2 text-center">Create a Password</h1>
               <p className="text-[var(--color-accent)] opacity-80 mb-8 text-center">Secure your thoughts and memories.</p>
             </div>
-            <form onSubmit={handleSetPassword}>
-              <div className="mb-4">
+            <form onSubmit={handleSetPassword} className="space-y-4">
+              <div>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => { setNewPassword(e.target.value); setError(''); }}
-                  placeholder="Choose a password"
+                  placeholder="Choose a password (min. 4 chars)"
                   className="w-full px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
                 />
               </div>
-              {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
+              <div>
+                <input
+                  type="text"
+                  value={passwordHint}
+                  onChange={(e) => setPasswordHint(e.target.value)}
+                  placeholder="Password hint (optional)"
+                  className="w-full px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+                />
+              </div>
+              {error && <p className="text-red-400 text-sm text-center">{error}</p>}
               <button type="submit" className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 hover:brightness-110">
                 Save & Enter
               </button>
@@ -163,13 +189,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ authState, setAuthState, onAuth
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className={`w-full transition-all duration-500 ${view === 'login' ? 'max-w-4xl' : 'max-w-md'}`}>
-        <div className={`bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-2xl shadow-2xl text-white border border-[var(--color-border)] ${view === 'login' ? 'md:flex' : ''}`}>
+        <div className={`bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-2xl shadow-2xl text-white border border-[var(--color-border)] ${view === 'login' ? 'md:flex' : ''}`}>
           {view === 'login' && (
             <div className="flex flex-1 flex-col items-center justify-center p-8 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
               <model-viewer
-                  src="https://cdn.glitch.global/6a56f40a-513c-42b7-9a5c-7557d383842c/a-beautiful-anime-girl.glb?v=1644788876882"
-                  alt="AI Assistant"
-                  animation-name="Wave"
+                  src="https://cdn.glitch.global/48398188-9630-4bfa-a3a1-267923485764/Hoshino.glb?v=1721074740156"
+                  alt="AI Assistant Hoshino"
+                  animation-name="Waving"
                   camera-controls
                   disable-zoom
                   style={{width: '100%', height: '250px', backgroundColor: 'transparent'}}

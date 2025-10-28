@@ -12,7 +12,7 @@ interface HomeScreenProps {
 const NavCard = ({ icon, title, description, onClick }: { icon: string; title: string; description: string; onClick: () => void; }) => (
   <button
     onClick={onClick}
-    className="bg-black/20 backdrop-blur-md rounded-xl p-6 border border-[var(--color-border)] text-left transition-all duration-300 hover:border-[var(--color-primary-muted)] hover:bg-white/10 transform hover:-translate-y-1"
+    className="bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-xl p-6 border border-[var(--color-border)] text-left transition-all duration-300 hover:border-[var(--color-primary-muted)] hover:shadow-[0_0_20px_-5px_var(--color-primary)] transform hover:-translate-y-1"
   >
     <div className="text-4xl mb-4">{icon}</div>
     <h3 className="text-xl font-bold text-white mb-1">{title}</h3>

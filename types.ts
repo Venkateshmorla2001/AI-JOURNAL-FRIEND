@@ -1,10 +1,33 @@
+// Fix: Added React import to correctly augment JSX.IntrinsicElements instead of overwriting it.
+// This resolves numerous 'Property does not exist on type JSX.IntrinsicElements' errors across all components.
+// Also provided a more specific type for the 'model-viewer' custom element.
+import React from 'react';
 
-// FIX: Moved to top of file to ensure it is loaded correctly.
+// FIX: Define a specific interface for the model-viewer element. This helps TypeScript
+// understand its properties and methods, and is crucial for the JSX augmentation to be picked up correctly.
+export interface ModelViewerElement extends HTMLElement {
+  src: string;
+  alt: string;
+  'animation-name'?: string;
+  'camera-controls'?: boolean;
+  'disable-zoom'?: boolean;
+  play: (options?: { repetitions?: number }) => Promise<void>;
+  model: unknown;
+}
+
 // Add JSX type definition for model-viewer
 declare global {
   namespace JSX {
+    // FIX: Use the specific ModelViewerElement interface for the augmentation.
+    // This provides a more accurate type and resolves the issue where the augmentation was not being applied.
     interface IntrinsicElements {
-      'model-viewer': any;
+      'model-viewer': React.DetailedHTMLProps<React.HTMLAttributes<ModelViewerElement> & {
+        src: string;
+        alt: string;
+        'animation-name'?: string;
+        'camera-controls'?: boolean;
+        'disable-zoom'?: boolean;
+      }, ModelViewerElement>;
     }
   }
 }
@@ -24,6 +47,7 @@ export type JournalEntry = {
 export type AuthState = {
   protection: 'enabled' | 'disabled' | 'unset';
   password?: string;
+  passwordHint?: string;
   rememberMe?: boolean;
 };
 

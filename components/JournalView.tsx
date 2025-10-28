@@ -17,7 +17,7 @@ declare global {
 }
 
 import React, { useState, useRef, useEffect } from 'react';
-import { JournalEntry } from '../types';
+import { JournalEntry, Emotion } from '../types';
 import { analyzeJournalEntry, generateImageForEntry } from '../services/geminiService';
 import JournalEntryCard from './JournalEntryCard';
 import LoadingSpinner from './LoadingSpinner';
@@ -29,6 +29,7 @@ interface JournalViewProps {
   setEntries: React.Dispatch<React.SetStateAction<JournalEntry[]>>;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
+  onEmotionDetected: (emotion: Emotion) => void;
 }
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -49,7 +50,7 @@ const MicIcon = ({ isListening }: { isListening: boolean }) => (
 );
 
 
-const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries, selectedDate, setSelectedDate }) => {
+const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries, selectedDate, setSelectedDate, onEmotionDetected }) => {
   const [currentContent, setCurrentContent] = useState('');
   const [image, setImage] = useState<{ file: File; base64: string; preview: string } | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -76,7 +77,8 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries, selected
     if (entryForDate) {
       setCurrentContent(entryForDate.content);
       if (entryForDate.image) {
-        setImage({ file: new File([], ""), base64: '', preview: entryForDate.image });
+        const base64 = entryForDate.image.split(',')[1];
+        setImage({ file: new File([], ""), base64: base64, preview: entryForDate.image });
       } else {
         setImage(null);
       }
@@ -117,6 +119,9 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries, selected
       setIsAnalyzing(true);
       const analysis = await analyzeJournalEntry(currentContent, image?.base64);
       currentEntryData.analysis = analysis;
+      if (analysis.emotion) {
+        onEmotionDetected(analysis.emotion);
+      }
       setIsAnalyzing(false);
     } else if (existingEntryIndex !== -1) {
       currentEntryData.analysis = entries[existingEntryIndex].analysis;
@@ -266,7 +271,7 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries, selected
 
   return (
     <div className="h-full flex flex-col p-4 md:p-6 gap-6">
-      <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-6 border border-[var(--color-border)] no-print">
+      <div className="bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-xl p-6 border border-[var(--color-border)] no-print">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-white">
             {isToday ? "What's on your mind today?" : `Journal for ${selectedDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`}
@@ -286,7 +291,7 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries, selected
           value={currentContent}
           onChange={(e) => setCurrentContent(e.target.value)}
           placeholder={isListening ? "Listening... your words will appear here." : "Start writing or tap the mic to speak..."}
-          className={`w-full h-40 p-4 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none transition-all text-white resize-none ${isListening ? 'ring-2 ring-red-500/70' : 'focus:ring-2 focus:ring-[var(--color-primary)]'} ${justTranscribed ? 'animate-flash' : ''}`}
+          className={`w-full h-40 p-4 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none transition-all text-[var(--color-text-primary)] resize-none ${isListening ? 'ring-2 ring-red-500/70' : 'focus:ring-2 focus:ring-[var(--color-primary)]'} ${justTranscribed ? 'animate-flash' : ''}`}
         />
         <div className="mt-4 flex justify-between items-center">
           <div className="flex gap-2 relative">

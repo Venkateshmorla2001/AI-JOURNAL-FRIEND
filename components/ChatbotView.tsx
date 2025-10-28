@@ -1,19 +1,13 @@
-
 // Fix for webkitAudioContext not being in standard TS lib
 declare global {
     interface Window {
         webkitAudioContext: typeof AudioContext;
     }
-    // FIX: Added JSX type definition for model-viewer to resolve compilation error.
-    namespace JSX {
-        interface IntrinsicElements {
-            'model-viewer': any;
-        }
-    }
 }
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChatMessage, ChatHistory, AppSettings } from '../types';
+// FIX: Imported the specific ModelViewerElement interface for strong typing of the ref.
+import { ChatMessage, ChatHistory, AppSettings, ModelViewerElement } from '../types';
 import { getChatResponse, getComplexChatResponse, getGroundedChatResponse } from '../services/geminiService';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -45,7 +39,8 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
   const [isWebSearch, setIsWebSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isToday = formatDateKey(selectedDate) === formatDateKey(new Date());
-  const modelViewerRef = useRef<any>(null);
+  // FIX: Replaced 'any' with the specific ModelViewerElement type for type safety.
+  const modelViewerRef = useRef<ModelViewerElement | null>(null);
 
   // Live session state
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -76,7 +71,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
     const modelViewer = modelViewerRef.current;
     if (modelViewer) {
       // Wave once on load
-      modelViewer.animationName = 'Wave';
+      modelViewer.animationName = 'Waving';
       modelViewer.play({repetitions: 1});
     }
   }, []);
@@ -85,9 +80,9 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
     const modelViewer = modelViewerRef.current;
     // Check if model has finished loading and we are not in an initial loading state
     if (modelViewer?.model && !isLoading && currentMessages.length > 0 && currentMessages[currentMessages.length - 1].role === 'model') {
-      modelViewer.animationName = 'ThumbsUp';
+      modelViewer.animationName = 'Talking';
       modelViewer.play({ repetitions: 1 }).then(() => {
-        modelViewer.animationName = 'Idle';
+        if(modelViewer) modelViewer.animationName = 'Idle';
       });
     }
   }, [isLoading, currentMessages]);
@@ -136,7 +131,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
     }
     
     setIsConnecting(true);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     outputAudioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
     nextStartTimeRef.current = 0;
@@ -194,7 +189,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
                     setCurrentOutputTranscription('');
                 }
 
-                const audioData = message.serverContent?.modelTurn?.parts[0]?.inlineData.data;
+                const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
                 if (audioData && outputAudioContextRef.current) {
                     const audioContext = outputAudioContextRef.current;
                     nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioContext.currentTime);
@@ -232,20 +227,21 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
         if (isLoading || !textInput.trim()) return;
 
         const newUserMessage: ChatMessage = { role: 'user', text: textInput.trim() };
-        setCurrentMessages(prev => [...prev, newUserMessage]);
+        const updatedMessages = [...currentMessages, newUserMessage];
+        setCurrentMessages(updatedMessages);
         setTextInput('');
         setIsLoading(true);
 
-        const history = [...currentMessages, newUserMessage];
+        const historyForAPI = [...currentMessages];
         let response: { text: string; sources?: any[] };
 
         if (isWebSearch) {
-            response = await getGroundedChatResponse(currentMessages, newUserMessage.text, settings.userName);
+            response = await getGroundedChatResponse(historyForAPI, newUserMessage.text, settings.userName);
         } else if (isDeepThought) {
-            const modelText = await getComplexChatResponse(currentMessages, newUserMessage.text, settings.userName);
+            const modelText = await getComplexChatResponse(historyForAPI, newUserMessage.text, settings.userName);
             response = { text: modelText };
         } else {
-            const modelText = await getChatResponse(currentMessages, newUserMessage.text, settings.userName);
+            const modelText = await getChatResponse(historyForAPI, newUserMessage.text, settings.userName);
             response = { text: modelText };
         }
 
@@ -254,11 +250,11 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
         if (!isIncognito) {
             const dateKey = formatDateKey(new Date());
             setChatHistory(prev => {
-                const updatedHistory = [...(prev[dateKey] || []), newUserMessage, newModelMessage];
-                return { ...prev, [dateKey]: updatedHistory };
+                const updatedHistoryForDate = [...(prev[dateKey] || []), newUserMessage, newModelMessage];
+                return { ...prev, [dateKey]: updatedHistoryForDate };
             });
         }
-        // This will update state for both incognito and regular mode
+        
         setCurrentMessages(prev => [...prev, newModelMessage]);
         setIsLoading(false);
     };
@@ -275,12 +271,12 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
   return (
     <div className="h-full flex flex-col md:flex-row p-4 md:p-6 gap-6">
       {/* Character Pane */}
-      <div className="flex flex-col items-center justify-center w-full md:w-1/3 bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-4 md:p-6 border border-[var(--color-border)]">
+      <div className="flex flex-col items-center justify-center w-full md:w-1/3 bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-xl p-4 md:p-6 border border-[var(--color-border)]">
         <h2 className="text-xl font-bold mb-2 md:mb-4">Honest Friend</h2>
         <model-viewer
             ref={modelViewerRef}
-            src="https://cdn.glitch.global/6a56f40a-513c-42b7-9a5c-7557d383842c/a-beautiful-anime-girl.glb?v=1644788876882"
-            alt="AI Assistant"
+            src="https://cdn.glitch.global/48398188-9630-4bfa-a3a1-267923485764/Hoshino.glb?v=1721074740156"
+            alt="AI Assistant Hoshino"
             animation-name="Idle"
             camera-controls
             disable-zoom
@@ -293,7 +289,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
 
       {/* Chat Pane */}
       <div className="flex-1 flex flex-col h-full">
-          <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-3 mb-4 border border-[var(--color-border)] flex justify-between items-center">
+          <div className="bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-xl p-3 mb-4 border border-[var(--color-border)] flex justify-between items-center">
             <div className="flex items-center gap-2">
               <label htmlFor="incognito-toggle" className="text-sm font-medium cursor-pointer">Incognito</label>
               <button
@@ -316,7 +312,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
               {currentMessages.map((msg, index) => (
                 <div key={index} className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                   {msg.role === 'model' && <BotIcon />}
-                  <div className={`max-w-md lg:max-w-lg p-3 rounded-2xl ${msg.role === 'user' ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] text-white rounded-br-none' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none'}`}>
+                  <div className={`max-w-md lg:max-w-lg p-3 rounded-2xl ${msg.role === 'user' ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] text-white rounded-br-none' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none border border-[var(--color-border)]'}`}>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                     {msg.sources && msg.sources.length > 0 && (
                         <div className="mt-2 border-t border-[var(--color-border)] pt-2">
@@ -338,8 +334,12 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
               {isLoading && (
                 <div className="flex items-start gap-3">
                   <BotIcon />
-                  <div className="max-w-md lg:max-w-lg p-3 rounded-2xl bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none">
-                    <LoadingSpinner size="sm" />
+                  <div className="max-w-md lg:max-w-lg p-3 rounded-2xl bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none border border-[var(--color-border)]">
+                    <div className="flex items-center space-x-1.5">
+                      <div className="w-2 h-2 bg-[var(--color-text-secondary)] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-2 h-2 bg-[var(--color-text-secondary)] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-2 h-2 bg-[var(--color-text-secondary)] rounded-full animate-bounce"></div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -353,7 +353,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
               {currentOutputTranscription && (
                   <div className="flex items-start gap-3 opacity-70">
                       <BotIcon />
-                      <div className="max-w-md lg:max-w-lg p-3 rounded-2xl bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none">
+                      <div className="max-w-md lg:max-w-lg p-3 rounded-2xl bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none border border-[var(--color-border)]">
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">{currentOutputTranscription}</p>
                       </div>
                   </div>
@@ -394,7 +394,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
                                 value={textInput}
                                 onChange={(e) => setTextInput(e.target.value)}
                                 placeholder={isDeepThought ? "Ask a complex question..." : (isWebSearch ? "Search the web..." : "Type a message...")}
-                                className="flex-1 px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all text-white disabled:opacity-50"
+                                className="flex-1 px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all text-[var(--color-text-primary)] disabled:opacity-50"
                                 disabled={isLoading || isSessionActive}
                             />
                             <button type="submit" className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading || isSessionActive || !textInput.trim()}>

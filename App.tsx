@@ -6,8 +6,9 @@ import HomeScreen from './components/HomeScreen';
 import CalendarView from './components/CalendarView';
 import SettingsView from './components/SettingsView';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { JournalEntry, ThemeName, AuthState, AppSettings, CalendarData } from './types';
+import { JournalEntry, ThemeName, AuthState, AppSettings, CalendarData, Emotion } from './types';
 import { themes } from './themes';
+import { EMOTION_MUSIC_MAP } from './constants';
 
 type View = 'home' | 'journal' | 'chatbot' | 'calendar' | 'settings';
 
@@ -74,7 +75,7 @@ export default function App() {
   }, [currentThemeName]);
   
   useEffect(() => {
-    if (audioRef.current) {
+    if (audioRef.current && isAuthenticated) {
         if (settings.isMusicEnabled && audioRef.current.paused) {
             audioRef.current.play().catch(e => console.error("Audio play failed:", e));
         } else if (!settings.isMusicEnabled && !audioRef.current.paused) {
@@ -94,6 +95,16 @@ export default function App() {
     setIsAuthenticated(false);
     if(authState.protection === 'enabled') {
         setAuthState(prev => ({ ...prev, rememberMe: false }));
+    }
+  };
+  
+  const handleEmotionDetected = (emotion: Emotion) => {
+    if (settings.isMusicEnabled && audioRef.current) {
+        const musicSrc = EMOTION_MUSIC_MAP[emotion];
+        if (musicSrc && audioRef.current.src !== musicSrc) {
+            audioRef.current.src = musicSrc;
+            audioRef.current.play().catch(e => console.error("Mood music play failed:", e));
+        }
     }
   };
 
@@ -120,7 +131,7 @@ export default function App() {
   const renderView = () => {
     switch(activeView) {
         case 'journal':
-            return <JournalView entries={journalEntries} setEntries={setJournalEntries} selectedDate={selectedJournalDate} setSelectedDate={setSelectedJournalDate} />;
+            return <JournalView entries={journalEntries} setEntries={setJournalEntries} selectedDate={selectedJournalDate} setSelectedDate={setSelectedJournalDate} onEmotionDetected={handleEmotionDetected} />;
         case 'chatbot':
             return <ChatbotView settings={settings} />;
         case 'calendar':
@@ -150,13 +161,17 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
-        <div className="absolute inset-0 animate-gradient-xy" style={backgroundStyle}></div>
+        <div className="absolute inset-0 animate-gradient-liquid" style={backgroundStyle}></div>
         <style>{`
-            @keyframes gradient-xy {
-                0%, 100% { background-size: 400% 400%; background-position: 0% 50%; }
-                50% { background-size: 200% 200%; background-position: 100% 50%; }
+            @keyframes gradient-liquid {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
             }
-            .animate-gradient-xy { animation: gradient-xy 15s ease infinite; }
+            .animate-gradient-liquid {
+                background-size: 400% 400%;
+                animation: gradient-liquid 20s ease infinite;
+            }
         `}</style>
       <div className="relative z-10 flex h-screen">
         <nav className="w-20 bg-black/30 backdrop-blur-xl border-r border-[var(--color-border)] flex flex-col items-center py-6 gap-6 no-print">

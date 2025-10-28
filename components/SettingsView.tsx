@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { AppSettings, ThemeName, AuthState } from '../types';
 import ThemeSwitcher from './ThemeSwitcher';
@@ -16,7 +16,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
   const [passwordAction, setPasswordAction] = useState<'change' | 'disable' | 'enable' | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [hint, setHint] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (passwordAction) {
+        setHint(passwordAction === 'change' ? authState.passwordHint || '' : '');
+        setCurrentPassword('');
+        setNewPassword('');
+        setError('');
+    }
+  }, [passwordAction, authState.passwordHint]);
   
   const toggleMusic = () => {
     setSettings(prev => ({ ...prev, isMusicEnabled: !prev.isMusicEnabled }));
@@ -24,9 +34,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
 
   const resetModalState = () => {
     setPasswordAction(null);
-    setCurrentPassword('');
-    setNewPassword('');
-    setError('');
   };
 
   const handleSubmitPasswordAction = (e: React.FormEvent) => {
@@ -42,7 +49,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
         setError('New password must be at least 4 characters long.');
         return;
       }
-      setAuthState(prev => ({ ...prev, password: newPassword }));
+      setAuthState(prev => ({ ...prev, password: newPassword, passwordHint: hint.trim() }));
       alert('Password changed successfully!');
       resetModalState();
     } else if (passwordAction === 'disable') {
@@ -50,7 +57,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
         setError('Incorrect password.');
         return;
       }
-      setAuthState({ protection: 'disabled', password: '' });
+      setAuthState({ protection: 'disabled', password: '', passwordHint: '' });
       alert('Password protection disabled.');
       resetModalState();
     } else if (passwordAction === 'enable') {
@@ -58,7 +65,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
         setError('Password must be at least 4 characters long.');
         return;
       }
-      setAuthState({ protection: 'enabled', password: newPassword, rememberMe: false });
+      setAuthState({ protection: 'enabled', password: newPassword, passwordHint: hint.trim(), rememberMe: false });
       alert('Password protection enabled.');
       resetModalState();
     }
@@ -80,7 +87,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
 
     return ReactDOM.createPortal(
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={resetModalState}>
-        <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl shadow-2xl w-full max-w-sm p-6 backdrop-blur-xl" onClick={e => e.stopPropagation()}>
           <h2 className="text-xl font-bold mb-4">{titles[passwordAction]}</h2>
           <form onSubmit={handleSubmitPasswordAction} className="space-y-4">
             {(passwordAction === 'change' || passwordAction === 'disable') && (
@@ -96,17 +103,28 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
               </div>
             )}
             {(passwordAction === 'change' || passwordAction === 'enable') && (
-              <div>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password (min. 4 chars)"
-                  required
-                  minLength={4}
-                  className="w-full px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
-                />
-              </div>
+              <>
+                <div>
+                    <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min. 4 chars)"
+                    required
+                    minLength={4}
+                    className="w-full px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+                    />
+                </div>
+                <div>
+                    <input
+                    type="text"
+                    value={hint}
+                    onChange={(e) => setHint(e.target.value)}
+                    placeholder="Password hint (optional)"
+                    className="w-full px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+                    />
+                </div>
+              </>
             )}
             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
             <div className="flex justify-end gap-4 pt-2">
@@ -124,10 +142,10 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
     <div className="h-full p-4 md:p-8">
       <h1 className="text-4xl font-bold text-white mb-8">Settings</h1>
       <div className="max-w-2xl mx-auto space-y-8">
-        <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-6 border border-[var(--color-border)]">
+        <div className="bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-xl p-6 border border-[var(--color-border)]">
           <h2 className="text-xl font-bold text-white mb-4">Preferences</h2>
           <div className="flex justify-between items-center">
-            <div className="text-white">
+            <div className="text-[var(--color-text-primary)]">
               <p className="font-semibold">Relaxing Music</p>
               <p className="text-sm text-[var(--color-text-secondary)]">Play soothing background music.</p>
             </div>
@@ -140,7 +158,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
           </div>
         </div>
         
-        <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-6 border border-[var(--color-border)]">
+        <div className="bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-xl p-6 border border-[var(--color-border)]">
           <h2 className="text-xl font-bold text-white mb-4">Security</h2>
           {authState.protection === 'enabled' ? (
             <div className="space-y-3">
@@ -158,7 +176,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, curr
           )}
         </div>
 
-        <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-6 border border-[var(--color-border)]">
+        <div className="bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-xl p-6 border border-[var(--color-border)]">
            <ThemeSwitcher currentThemeName={currentThemeName} onThemeChange={onThemeChange} />
         </div>
       </div>

@@ -25,7 +25,7 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry }) => {
   const emotionEmoji = analysis ? EMOTION_EMOJIS[analysis.emotion] : '🤔';
 
   return (
-    <div className={`bg-black/20 backdrop-blur-md rounded-xl p-6 border transition-all duration-300 hover:border-[var(--color-primary-muted)] ${emotionColor} journal-card-print`}>
+    <div className={`bg-[var(--color-bg-secondary)] backdrop-blur-xl rounded-xl p-6 border transition-all duration-300 hover:border-[var(--color-primary-muted)] hover:shadow-[0_0_20px_-5px_var(--color-primary)] ${emotionColor} journal-card-print`}>
       {image && <img src={image} alt="Journal entry" className="w-full h-auto object-cover rounded-lg mb-4" />}
       <div className="flex justify-between items-start mb-4">
         <div className="font-semibold text-lg text-[var(--color-accent)] flex items-center">

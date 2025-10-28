@@ -26,7 +26,6 @@ export const STICKERS: { name: string; emoji: string }[] = [
     { name: 'Gaming', emoji: '🎮' },
 ];
 
-
 export const EMOTION_COLORS: Record<Emotion, string> = {
   [Emotion.Joy]: 'border-yellow-400 bg-yellow-400/10',
   [Emotion.Gratitude]: 'border-green-400 bg-green-400/10',
@@ -47,4 +46,15 @@ export const EMOTION_EMOJIS: Record<Emotion, string> = {
   [Emotion.Anger]: '😠',
   [Emotion.Fear]: '😨',
   [Emotion.Neutral]: '😐',
+};
+
+export const EMOTION_MUSIC_MAP: Record<Emotion, string> = {
+    [Emotion.Joy]: 'https://cdn.glitch.global/e82cf637-27a3-4340-98a4-0a37e584a6c8/please-calm-my-mind-125566.mp3?v=1720640523263',
+    [Emotion.Gratitude]: 'https://cdn.glitch.global/e82cf637-27a3-4340-98a4-0a37e584a6c8/spirit-blossom-152857.mp3?v=1720640578841',
+    [Emotion.Love]: 'https://cdn.glitch.global/e82cf637-27a3-4340-98a4-0a37e584a6c8/romantic-gentle-piano-174116.mp3?v=1720640608985',
+    [Emotion.Optimism]: 'https://cdn.glitch.global/e82cf637-27a3-4340-98a4-0a37e584a6c8/inspiring-cinematic-ambient-116199.mp3?v=1720640645129',
+    [Emotion.Sadness]: 'https://cdn.glitch.global/e82cf637-27a3-4340-98a4-0a37e584a6c8/sad-soul-chasing-a-feeling-185750.mp3?v=1720640683076',
+    [Emotion.Anger]: 'https://cdn.glitch.global/e82cf637-27a3-4340-98a4-0a37e584a6c8/dark-tense-hip-hop-logo-152061.mp3?v=1720640713725',
+    [Emotion.Fear]: 'https://cdn.glitch.global/e82cf637-27a3-4340-98a4-0a37e584a6c8/the-ghost-144212.mp3?v=1720640742183',
+    [Emotion.Neutral]: 'https://cdn.glitch.global/e82cf637-27a3-4340-98a4-0a37e584a6c8/lofi-study-112191.mp3?v=1720640478099',
 };

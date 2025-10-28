@@ -1,24 +1,23 @@
-
 import { Theme } from './types';
 
 export const themes: Theme[] = [
   {
-    name: 'Twilight Nebula',
+    name: 'Twilight Nebula', // Liquid Glass Theme
     colors: {
-        '--color-primary': '#db2777', // pink-600
-        '--color-primary-hover': '#be185d', // pink-700
-        '--color-primary-muted': 'rgba(219, 39, 119, 0.8)',
-        '--color-secondary': '#8b5cf6', // purple-500
-        '--color-secondary-muted': 'rgba(139, 92, 246, 0.5)',
-        '--color-accent': '#22d3ee', // cyan-400
-        '--color-text-primary': '#ffffff',
-        '--color-text-secondary': '#d1d5db', // gray-300
-        '--color-bg-primary': '#111827', // gray-900
-        '--color-bg-secondary': 'rgba(255, 255, 255, 0.1)',
-        '--color-border': 'rgba(255, 255, 255, 0.2)',
-        '--color-gradient-from': '#3730a3', // indigo-800
-        '--color-gradient-via': '#581c87', // purple-900
-        '--color-gradient-to': '#0c4a6e', // sky-900
+        '--color-primary': '#60a5fa', // blue-400
+        '--color-primary-hover': '#3b82f6', // blue-500
+        '--color-primary-muted': 'rgba(96, 165, 250, 0.5)',
+        '--color-secondary': '#a78bfa', // violet-400
+        '--color-secondary-muted': 'rgba(167, 139, 250, 0.4)',
+        '--color-accent': '#4ade80', // green-400
+        '--color-text-primary': '#e5e7eb', // gray-200
+        '--color-text-secondary': '#9ca3af', // gray-400
+        '--color-bg-primary': '#030712', // gray-950
+        '--color-bg-secondary': 'rgba(255, 255, 255, 0.07)',
+        '--color-border': 'rgba(255, 255, 255, 0.1)',
+        '--color-gradient-from': '#1e3a8a', // blue-900
+        '--color-gradient-via': '#1e1b4b', // indigo-950
+        '--color-gradient-to': '#064e3b', // green-900
     },
   },
   {
