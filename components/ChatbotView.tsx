@@ -3,6 +3,12 @@ declare global {
     interface Window {
         webkitAudioContext: typeof AudioContext;
     }
+    // Add JSX type definition for model-viewer to fix TypeScript error
+    namespace JSX {
+        interface IntrinsicElements {
+            'model-viewer': any;
+        }
+    }
 }
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -38,6 +44,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
   const [isWebSearch, setIsWebSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isToday = formatDateKey(selectedDate) === formatDateKey(new Date());
+  const modelViewerRef = useRef<any>(null);
 
   // Live session state
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -63,6 +70,26 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentMessages, isLoading, currentInputTranscription, currentOutputTranscription]);
+
+  useEffect(() => {
+    const modelViewer = modelViewerRef.current;
+    if (modelViewer) {
+      // Wave once on load
+      modelViewer.animationName = 'Wave';
+      modelViewer.play({repetitions: 1});
+    }
+  }, []);
+  
+  useEffect(() => {
+    const modelViewer = modelViewerRef.current;
+    // Check if model has finished loading and we are not in an initial loading state
+    if (modelViewer?.model && !isLoading && currentMessages.length > 0 && currentMessages[currentMessages.length - 1].role === 'model') {
+      modelViewer.animationName = 'ThumbsUp';
+      modelViewer.play({ repetitions: 1 }).then(() => {
+        modelViewer.animationName = 'Idle';
+      });
+    }
+  }, [isLoading, currentMessages]);
   
   const cleanupAudio = useCallback(() => {
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -222,8 +249,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
         }
 
         const newModelMessage: ChatMessage = { role: 'model', text: response.text, sources: response.sources };
-        setCurrentMessages(prev => [...prev, newModelMessage]);
-
+        
         if (!isIncognito) {
             const dateKey = formatDateKey(new Date());
             setChatHistory(prev => {
@@ -231,6 +257,8 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
                 return { ...prev, [dateKey]: updatedHistory };
             });
         }
+        // This will update state for both incognito and regular mode
+        setCurrentMessages(prev => [...prev, newModelMessage]);
         setIsLoading(false);
     };
 
@@ -244,138 +272,158 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 md:p-6">
-      <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-3 mb-4 border border-[var(--color-border)] flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <label htmlFor="incognito-toggle" className="text-sm font-medium cursor-pointer">Incognito</label>
-          <button
-            id="incognito-toggle"
-            onClick={() => setIsIncognito(!isIncognito)}
-            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${isIncognito ? 'bg-[var(--color-primary)]' : 'bg-gray-600'}`}
-          >
-            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${isIncognito ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <button onClick={() => changeDate(-1)} className="p-2 rounded-full hover:bg-white/10 transition-colors">&lt;</button>
-          <span className="font-semibold text-lg">{isToday ? 'Today' : selectedDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-          <button onClick={() => changeDate(1)} disabled={isToday} className="p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">&gt;</button>
-        </div>
+    <div className="h-full flex flex-col md:flex-row p-4 md:p-6 gap-6">
+      {/* Character Pane */}
+      <div className="hidden md:flex flex-col items-center justify-center w-1/3 bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-6 border border-[var(--color-border)]">
+        <h2 className="text-xl font-bold mb-4">Honest Friend</h2>
+        <model-viewer
+            ref={modelViewerRef}
+            src="https://modelviewer.dev/shared-assets/models/RobotExpressive.glb"
+            alt="AI Assistant"
+            animation-name="Idle"
+            camera-controls
+            disable-zoom
+            style={{width: '100%', height: '300px', backgroundColor: 'transparent'}}
+        ></model-viewer>
+        <p className="text-sm text-center text-[var(--color-text-secondary)] mt-4">
+            I'm here to listen and help. What's on your mind, {settings.userName || 'friend'}?
+        </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto mb-4 pr-2">
-        <div className="space-y-6">
-          {currentMessages.map((msg, index) => (
-            <div key={index} className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-              {msg.role === 'model' && <BotIcon />}
-              <div className={`max-w-md lg:max-w-lg p-3 rounded-2xl ${msg.role === 'user' ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] text-white rounded-br-none' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none'}`}>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                 {msg.sources && msg.sources.length > 0 && (
-                    <div className="mt-2 border-t border-[var(--color-border)] pt-2">
-                        <h4 className="text-xs font-semibold mb-1 text-[var(--color-text-primary)]">Sources:</h4>
-                        <ul className="space-y-1">
-                            {msg.sources.map((source, i) => (
-                                <li key={i} className="text-xs truncate">
-                                    <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent)] hover:underline">
-                                        {source.web.title || source.web.uri}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-              </div>
+      {/* Chat Pane */}
+      <div className="flex-1 flex flex-col h-full">
+          <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-3 mb-4 border border-[var(--color-border)] flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <label htmlFor="incognito-toggle" className="text-sm font-medium cursor-pointer">Incognito</label>
+              <button
+                id="incognito-toggle"
+                onClick={() => setIsIncognito(!isIncognito)}
+                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${isIncognito ? 'bg-[var(--color-primary)]' : 'bg-gray-600'}`}
+              >
+                <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${isIncognito ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
             </div>
-          ))}
-          {isLoading && (
-            <div className="flex items-start gap-3">
-              <BotIcon />
-              <div className="max-w-md lg:max-w-lg p-3 rounded-2xl bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none">
-                <LoadingSpinner size="sm" />
-              </div>
+            <div className="flex items-center gap-4">
+              <button onClick={() => changeDate(-1)} className="p-2 rounded-full hover:bg-white/10 transition-colors">&lt;</button>
+              <span className="font-semibold text-lg">{isToday ? 'Today' : selectedDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+              <button onClick={() => changeDate(1)} disabled={isToday} className="p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">&gt;</button>
             </div>
-          )}
-          {currentInputTranscription && (
-            <div className="flex items-start gap-3 justify-end opacity-70">
-                <div className="max-w-md lg:max-w-lg p-3 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] text-white rounded-br-none">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{currentInputTranscription}</p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto mb-4 pr-2">
+            <div className="space-y-6">
+              {currentMessages.map((msg, index) => (
+                <div key={index} className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                  {msg.role === 'model' && <BotIcon />}
+                  <div className={`max-w-md lg:max-w-lg p-3 rounded-2xl ${msg.role === 'user' ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] text-white rounded-br-none' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none'}`}>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                    {msg.sources && msg.sources.length > 0 && (
+                        <div className="mt-2 border-t border-[var(--color-border)] pt-2">
+                            <h4 className="text-xs font-semibold mb-1 text-[var(--color-text-primary)]">Sources:</h4>
+                            <ul className="space-y-1">
+                                {msg.sources.map((source, i) => (
+                                    <li key={i} className="text-xs truncate">
+                                        <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent)] hover:underline">
+                                            {source.web.title || source.web.uri}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                  </div>
                 </div>
-            </div>
-          )}
-          {currentOutputTranscription && (
-              <div className="flex items-start gap-3 opacity-70">
+              ))}
+              {isLoading && (
+                <div className="flex items-start gap-3">
                   <BotIcon />
                   <div className="max-w-md lg:max-w-lg p-3 rounded-2xl bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none">
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{currentOutputTranscription}</p>
+                    <LoadingSpinner size="sm" />
                   </div>
-              </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      <div className="mt-auto">
-        {isToday ? (
-            <>
-                <div className="text-center">
-                    <button 
-                        onClick={() => isSessionActive || isConnecting ? stopSession() : startSession()}
-                        className={`relative w-20 h-20 rounded-full transition-all duration-300 flex items-center justify-center mx-auto disabled:opacity-50 ${isSessionActive ? 'bg-red-500/50' : 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)]'}`}
-                        disabled={isConnecting || !!textInput}
-                    >
-                        {isConnecting ? <LoadingSpinner /> : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v4m-4-4a4 4 0 018 0" />
-                            </svg>
-                        )}
-                        {isSessionActive && <div className="absolute inset-0 rounded-full border-2 border-[var(--color-primary)] animate-pulse"></div>}
-                    </button>
-                    <p className="text-sm text-[var(--color-text-secondary)] mt-2 h-4">
-                        {isConnecting ? 'Connecting...' : (isSessionActive ? 'Tap to end conversation' : 'Tap to talk with Honest friend')}
-                    </p>
                 </div>
-                 <div className="relative flex items-center justify-center my-4">
-                    <div className="flex-grow border-t border-[var(--color-border)]"></div>
-                    <span className="flex-shrink mx-4 text-xs text-[var(--color-text-secondary)]">OR</span>
-                    <div className="flex-grow border-t border-[var(--color-border)]"></div>
-                </div>
-                <div>
-                    <form onSubmit={handleSendTextMessage} className="flex items-center gap-2">
-                        <input
-                            type="text"
-                            value={textInput}
-                            onChange={(e) => setTextInput(e.target.value)}
-                            placeholder={isDeepThought ? "Ask a complex question..." : (isWebSearch ? "Search the web..." : "Type a message...")}
-                            className="flex-1 px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all text-white disabled:opacity-50"
-                            disabled={isLoading || isSessionActive}
-                        />
-                        <button type="submit" className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading || isSessionActive || !textInput.trim()}>
-                            {isLoading ? <LoadingSpinner size="sm" /> : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.428A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
-                            )}
-                        </button>
-                    </form>
-                    <div className="flex items-center justify-center gap-6 mt-4">
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm font-medium cursor-pointer">Web Search</label>
-                            <button onClick={() => { setIsWebSearch(!isWebSearch); if(!isWebSearch) setIsDeepThought(false); }} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${isWebSearch ? 'bg-[var(--color-primary)]' : 'bg-gray-600'}`}>
-                               <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${isWebSearch ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm font-medium cursor-pointer">Deep Thought</label>
-                            <button onClick={() => { setIsDeepThought(!isDeepThought); if(!isDeepThought) setIsWebSearch(false); }} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${isDeepThought ? 'bg-[var(--color-primary)]' : 'bg-gray-600'}`}>
-                              <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${isDeepThought ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </button>
-                        </div>
+              )}
+              {currentInputTranscription && (
+                <div className="flex items-start gap-3 justify-end opacity-70">
+                    <div className="max-w-md lg:max-w-lg p-3 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] text-white rounded-br-none">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{currentInputTranscription}</p>
                     </div>
                 </div>
-            </>
-        ) : (
-            <div className="bg-[var(--color-bg-secondary)] text-sm text-[var(--color-text-secondary)] py-3 px-4 rounded-lg text-center">
-                Voice and text chat is only available for today's conversation.
+              )}
+              {currentOutputTranscription && (
+                  <div className="flex items-start gap-3 opacity-70">
+                      <BotIcon />
+                      <div className="max-w-md lg:max-w-lg p-3 rounded-2xl bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] rounded-bl-none">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{currentOutputTranscription}</p>
+                      </div>
+                  </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
-        )}
+          </div>
+
+          <div className="mt-auto">
+            {isToday ? (
+                <>
+                    <div className="text-center">
+                        <button 
+                            onClick={() => isSessionActive || isConnecting ? stopSession() : startSession()}
+                            className={`relative w-20 h-20 rounded-full transition-all duration-300 flex items-center justify-center mx-auto disabled:opacity-50 ${isSessionActive ? 'bg-red-500/50' : 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)]'}`}
+                            disabled={isConnecting || !!textInput}
+                        >
+                            {isConnecting ? <LoadingSpinner /> : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v4m-4-4a4 4 0 018 0" />
+                                </svg>
+                            )}
+                            {isSessionActive && <div className="absolute inset-0 rounded-full border-2 border-[var(--color-primary)] animate-pulse"></div>}
+                        </button>
+                        <p className="text-sm text-[var(--color-text-secondary)] mt-2 h-4">
+                            {isConnecting ? 'Connecting...' : (isSessionActive ? 'Tap to end conversation' : 'Tap to talk with Honest friend')}
+                        </p>
+                    </div>
+                    <div className="relative flex items-center justify-center my-4">
+                        <div className="flex-grow border-t border-[var(--color-border)]"></div>
+                        <span className="flex-shrink mx-4 text-xs text-[var(--color-text-secondary)]">OR</span>
+                        <div className="flex-grow border-t border-[var(--color-border)]"></div>
+                    </div>
+                    <div>
+                        <form onSubmit={handleSendTextMessage} className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={textInput}
+                                onChange={(e) => setTextInput(e.target.value)}
+                                placeholder={isDeepThought ? "Ask a complex question..." : (isWebSearch ? "Search the web..." : "Type a message...")}
+                                className="flex-1 px-4 py-3 bg-black/30 rounded-lg border border-[var(--color-secondary-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all text-white disabled:opacity-50"
+                                disabled={isLoading || isSessionActive}
+                            />
+                            <button type="submit" className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading || isSessionActive || !textInput.trim()}>
+                                {isLoading ? <LoadingSpinner size="sm" /> : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.428A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                                )}
+                            </button>
+                        </form>
+                        <div className="flex items-center justify-center gap-6 mt-4">
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium cursor-pointer">Web Search</label>
+                                <button onClick={() => { setIsWebSearch(!isWebSearch); if(!isWebSearch) setIsDeepThought(false); }} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${isWebSearch ? 'bg-[var(--color-primary)]' : 'bg-gray-600'}`}>
+                                  <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${isWebSearch ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium cursor-pointer">Deep Thought</label>
+                                <button onClick={() => { setIsDeepThought(!isDeepThought); if(!isDeepThought) setIsWebSearch(false); }} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${isDeepThought ? 'bg-[var(--color-primary)]' : 'bg-gray-600'}`}>
+                                  <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${isDeepThought ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <div className="bg-[var(--color-bg-secondary)] text-sm text-[var(--color-text-secondary)] py-3 px-4 rounded-lg text-center">
+                    Voice and text chat is only available for today's conversation.
+                </div>
+            )}
+          </div>
       </div>
     </div>
   );

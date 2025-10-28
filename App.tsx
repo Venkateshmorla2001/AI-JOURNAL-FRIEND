@@ -51,6 +51,7 @@ export default function App() {
   const [settings, setSettings] = useLocalStorage<AppSettings>('journal-settings', { isMusicEnabled: false });
   const [activeView, setActiveView] = useState<View>('home');
   const [currentThemeName, setCurrentThemeName] = useLocalStorage<ThemeName>('journal-theme', 'Twilight Nebula');
+  const [selectedJournalDate, setSelectedJournalDate] = useState(new Date());
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -119,13 +120,28 @@ export default function App() {
   const renderView = () => {
     switch(activeView) {
         case 'journal':
-            return <JournalView entries={journalEntries} setEntries={setJournalEntries} />;
+            return <JournalView entries={journalEntries} setEntries={setJournalEntries} selectedDate={selectedJournalDate} setSelectedDate={setSelectedJournalDate} />;
         case 'chatbot':
             return <ChatbotView settings={settings} />;
         case 'calendar':
-            return <CalendarView entries={journalEntries} calendarData={calendarData} setCalendarData={setCalendarData} />;
+            return <CalendarView 
+                        entries={journalEntries} 
+                        calendarData={calendarData} 
+                        setCalendarData={setCalendarData}
+                        onDateSelectForJournal={(date) => {
+                            setSelectedJournalDate(date);
+                            setActiveView('journal');
+                        }}
+                    />;
         case 'settings':
-            return <SettingsView settings={settings} setSettings={setSettings} currentThemeName={currentThemeName} onThemeChange={setCurrentThemeName} />;
+            return <SettingsView 
+                        settings={settings} 
+                        setSettings={setSettings} 
+                        currentThemeName={currentThemeName} 
+                        onThemeChange={setCurrentThemeName} 
+                        authState={authState}
+                        setAuthState={setAuthState}
+                    />;
         case 'home':
         default:
             return <HomeScreen setView={setActiveView} settings={settings} setSettings={setSettings} />;
@@ -145,7 +161,7 @@ export default function App() {
       <div className="relative z-10 flex h-screen">
         <nav className="w-20 bg-black/30 backdrop-blur-xl border-r border-[var(--color-border)] flex flex-col items-center py-6 gap-6 no-print">
             <button onClick={() => setActiveView('home')} className="group p-3 rounded-xl transition-colors hover:bg-white/10" aria-label="Home"><HomeIcon isActive={activeView === 'home'} /></button>
-            <button onClick={() => setActiveView('journal')} className="group p-3 rounded-xl transition-colors hover:bg-white/10" aria-label="Journal View"><JournalIcon isActive={activeView === 'journal'} /></button>
+            <button onClick={() => { setSelectedJournalDate(new Date()); setActiveView('journal'); }} className="group p-3 rounded-xl transition-colors hover:bg-white/10" aria-label="Journal View"><JournalIcon isActive={activeView === 'journal'} /></button>
             <button onClick={() => setActiveView('chatbot')} className="group p-3 rounded-xl transition-colors hover:bg-white/10" aria-label="Chatbot View"><ChatIcon isActive={activeView === 'chatbot'} /></button>
             <button onClick={() => setActiveView('calendar')} className="group p-3 rounded-xl transition-colors hover:bg-white/10" aria-label="Calendar View"><CalendarIcon isActive={activeView === 'calendar'} /></button>
             <div className="mt-auto flex flex-col gap-4 items-center">

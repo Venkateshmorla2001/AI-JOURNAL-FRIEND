@@ -2,6 +2,15 @@ import React, { useState, useMemo } from 'react';
 import { AuthState } from '../types';
 import { POSITIVE_QUOTES } from '../constants';
 
+// Add JSX type definition for model-viewer to fix TypeScript error
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'model-viewer': any;
+    }
+  }
+}
+
 interface AuthScreenProps {
   authState: AuthState;
   setAuthState: React.Dispatch<React.SetStateAction<AuthState>>;
@@ -152,9 +161,28 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ authState, setAuthState, onAuth
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-2xl shadow-2xl p-8 text-white border border-[var(--color-border)]">
-          {renderContent()}
+      <div className={`w-full transition-all duration-500 ${view === 'login' ? 'max-w-4xl' : 'max-w-md'}`}>
+        <div className={`bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-2xl shadow-2xl text-white border border-[var(--color-border)] ${view === 'login' ? 'md:flex' : ''}`}>
+          {view === 'login' && (
+            <div className="hidden md:flex flex-1 flex-col items-center justify-center p-8 border-r border-[var(--color-border)]">
+              <model-viewer
+                  src="https://modelviewer.dev/shared-assets/models/RobotExpressive.glb"
+                  alt="AI Assistant"
+                  animation-name="Wave"
+                  auto-rotate
+                  camera-controls
+                  disable-zoom
+                  style={{width: '100%', height: '250px', backgroundColor: 'transparent'}}
+              ></model-viewer>
+              <div className="relative mt-4 bg-black/30 p-3 rounded-lg border border-[var(--color-secondary-muted)]">
+                  <p className="text-sm text-center">Welcome back! I've kept your journal safe. Please enter your password.</p>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-l-transparent border-r-8 border-r-transparent border-t-8 border-t-black/50"></div>
+              </div>
+            </div>
+          )}
+          <div className={`p-8 ${view === 'login' ? 'w-full md:w-1/2' : 'w-full'}`}>
+            {renderContent()}
+          </div>
         </div>
       </div>
     </div>

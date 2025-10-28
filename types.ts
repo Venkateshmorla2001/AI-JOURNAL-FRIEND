@@ -75,3 +75,12 @@ export type Theme = {
     '--color-gradient-to':string;
   };
 };
+
+// Add JSX type definition for model-viewer
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'model-viewer': any;
+    }
+  }
+}

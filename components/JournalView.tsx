@@ -27,6 +27,8 @@ import { useDebounce } from '../hooks/useDebounce';
 interface JournalViewProps {
   entries: JournalEntry[];
   setEntries: React.Dispatch<React.SetStateAction<JournalEntry[]>>;
+  selectedDate: Date;
+  setSelectedDate: (date: Date) => void;
 }
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -47,7 +49,7 @@ const MicIcon = ({ isListening }: { isListening: boolean }) => (
 );
 
 
-const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
+const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries, selectedDate, setSelectedDate }) => {
   const [currentContent, setCurrentContent] = useState('');
   const [image, setImage] = useState<{ file: File; base64: string; preview: string } | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -62,25 +64,34 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-
+  const dateId = formatDate(selectedDate);
+  const isToday = formatDate(new Date()) === dateId;
+  
   const debouncedContent = useDebounce(currentContent, 1500);
   const debouncedImage = useDebounce(image, 500);
   const debouncedLocation = useDebounce(location, 500);
 
   useEffect(() => {
-    const todayId = formatDate(new Date());
-    const todayEntry = entries.find(e => e.id === todayId);
-    if (todayEntry) {
-      setCurrentContent(todayEntry.content);
-      if (todayEntry.image) {
-        // Note: Can't restore the file object, but can show preview
-        setImage({ file: new File([], ""), base64: '', preview: todayEntry.image });
+    const entryForDate = entries.find(e => e.id === dateId);
+    if (entryForDate) {
+      setCurrentContent(entryForDate.content);
+      if (entryForDate.image) {
+        setImage({ file: new File([], ""), base64: '', preview: entryForDate.image });
+      } else {
+        setImage(null);
       }
-      if (todayEntry.location) {
-        setLocation(todayEntry.location);
+      if (entryForDate.location) {
+        setLocation(entryForDate.location);
+      } else {
+        setLocation(null);
       }
+    } else {
+      // Reset fields for a new entry on a different date
+      setCurrentContent('');
+      setImage(null);
+      setLocation(null);
     }
-  }, []); // Run only on initial mount
+  }, [dateId, entries]);
 
   useEffect(() => {
     autoSaveAndAnalyze();
@@ -90,8 +101,7 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
     if (currentContent.trim() === '' && !image) return;
     setSaveStatus('saving');
 
-    const todayId = formatDate(new Date());
-    const existingEntryIndex = entries.findIndex(e => e.id === todayId);
+    const existingEntryIndex = entries.findIndex(e => e.id === dateId);
 
     let currentEntryData: Partial<JournalEntry> = {
       content: currentContent,
@@ -99,7 +109,6 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
       location: location
     };
     
-    // Check if content has changed enough to re-analyze
     const hasContentChanged = existingEntryIndex !== -1 ? 
       (entries[existingEntryIndex].content !== currentContent || entries[existingEntryIndex].image !== image?.preview) 
       : true;
@@ -114,8 +123,8 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
     }
 
     const newEntry: JournalEntry = {
-      id: todayId,
-      date: new Date().toISOString(),
+      id: dateId,
+      date: selectedDate.toISOString(),
       ...currentEntryData,
       content: currentContent,
     };
@@ -125,7 +134,7 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
       updatedEntries[existingEntryIndex] = { ...updatedEntries[existingEntryIndex], ...newEntry };
       setEntries(updatedEntries);
     } else {
-      setEntries([newEntry, ...entries]);
+      setEntries(prev => [...prev, newEntry].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     }
 
     setSaveStatus('saved');
@@ -258,7 +267,14 @@ const JournalView: React.FC<JournalViewProps> = ({ entries, setEntries }) => {
   return (
     <div className="h-full flex flex-col p-4 md:p-6 gap-6">
       <div className="bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-6 border border-[var(--color-border)] no-print">
-        <h2 className="text-2xl font-bold text-white mb-4">What's on your mind today?</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-white">
+            {isToday ? "What's on your mind today?" : `Journal for ${selectedDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`}
+          </h2>
+          {!isToday && (
+            <button onClick={() => setSelectedDate(new Date())} className="text-sm bg-white/10 px-3 py-1 rounded-lg hover:bg-white/20 transition-colors">Go to Today</button>
+          )}
+        </div>
         {image && (
           <div className="mb-4 relative">
             <img src={image.preview} alt="Preview" className="w-full h-auto max-h-48 object-cover rounded-lg" />

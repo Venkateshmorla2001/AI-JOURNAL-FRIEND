@@ -8,6 +8,7 @@ interface CalendarViewProps {
   entries: JournalEntry[];
   calendarData: CalendarData;
   setCalendarData: React.Dispatch<React.SetStateAction<CalendarData>>;
+  onDateSelectForJournal: (date: Date) => void;
 }
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -44,7 +45,6 @@ const LabelEditorModal = ({ date, existingLabel, onSave, onClose }: { date: Date
     return ReactDOM.createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
             <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-                {/* FIX: Corrected typo from toLocaleDate_string to toLocaleDateString */}
                 <h2 className="text-xl font-bold mb-4">Label for {date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</h2>
                 <div className="flex border-b border-[var(--color-border)] mb-4">
                     <button onClick={() => setActiveTab('emoji')} className={`px-4 py-2 text-sm font-semibold ${activeTab === 'emoji' ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]' : 'text-gray-400'}`}>Emoji</button>
@@ -80,7 +80,7 @@ const LabelEditorModal = ({ date, existingLabel, onSave, onClose }: { date: Date
     );
 };
 
-const CalendarView: React.FC<CalendarViewProps> = ({ entries, calendarData, setCalendarData }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ entries, calendarData, setCalendarData, onDateSelectForJournal }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewingEntry, setViewingEntry] = useState<JournalEntry | null>(null);
@@ -135,10 +135,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ entries, calendarData, setC
     if (!date) return;
     const dayKey = formatDateKey(date);
     const entry = entries.find(e => e.id === dayKey);
+    const label = calendarData[dayKey];
     if (entry) {
         setViewingEntry(entry);
-    } else {
+    } else if (label) {
         setSelectedDate(date);
+    } else {
+        onDateSelectForJournal(date);
     }
   };
   
