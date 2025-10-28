@@ -1,8 +1,9 @@
+
 import React, { useState, useMemo } from 'react';
 import { AuthState } from '../types';
 import { POSITIVE_QUOTES } from '../constants';
 
-// Add JSX type definition for model-viewer to fix TypeScript error
+// FIX: Added JSX type definition for model-viewer to resolve compilation error.
 declare global {
   namespace JSX {
     interface IntrinsicElements {
@@ -164,18 +165,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ authState, setAuthState, onAuth
       <div className={`w-full transition-all duration-500 ${view === 'login' ? 'max-w-4xl' : 'max-w-md'}`}>
         <div className={`bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-2xl shadow-2xl text-white border border-[var(--color-border)] ${view === 'login' ? 'md:flex' : ''}`}>
           {view === 'login' && (
-            <div className="hidden md:flex flex-1 flex-col items-center justify-center p-8 border-r border-[var(--color-border)]">
+            <div className="flex flex-1 flex-col items-center justify-center p-8 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
               <model-viewer
-                  src="https://modelviewer.dev/shared-assets/models/RobotExpressive.glb"
+                  src="https://cdn.glitch.global/6a56f40a-513c-42b7-9a5c-7557d383842c/a-beautiful-anime-girl.glb?v=1644788876882"
                   alt="AI Assistant"
                   animation-name="Wave"
-                  auto-rotate
                   camera-controls
                   disable-zoom
                   style={{width: '100%', height: '250px', backgroundColor: 'transparent'}}
               ></model-viewer>
               <div className="relative mt-4 bg-black/30 p-3 rounded-lg border border-[var(--color-secondary-muted)]">
-                  <p className="text-sm text-center">Welcome back! I've kept your journal safe. Please enter your password.</p>
+                  <p className="text-sm text-center">Welcome back!~ ☆ I've been waiting for you! Your secrets are safe with me. Let's get you logged in!</p>
                   <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-l-transparent border-r-8 border-r-transparent border-t-8 border-t-black/50"></div>
               </div>
             </div>

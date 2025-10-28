@@ -1,3 +1,14 @@
+
+// FIX: Moved to top of file to ensure it is loaded correctly.
+// Add JSX type definition for model-viewer
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'model-viewer': any;
+    }
+  }
+}
+
 export type JournalEntry = {
   id: string; // YYYY-MM-DD format
   date: string; // ISO String format
@@ -75,12 +86,3 @@ export type Theme = {
     '--color-gradient-to':string;
   };
 };
-
-// Add JSX type definition for model-viewer
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'model-viewer': any;
-    }
-  }
-}

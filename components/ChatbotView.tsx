@@ -1,9 +1,10 @@
+
 // Fix for webkitAudioContext not being in standard TS lib
 declare global {
     interface Window {
         webkitAudioContext: typeof AudioContext;
     }
-    // Add JSX type definition for model-viewer to fix TypeScript error
+    // FIX: Added JSX type definition for model-viewer to resolve compilation error.
     namespace JSX {
         interface IntrinsicElements {
             'model-viewer': any;
@@ -274,18 +275,18 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ settings }) => {
   return (
     <div className="h-full flex flex-col md:flex-row p-4 md:p-6 gap-6">
       {/* Character Pane */}
-      <div className="hidden md:flex flex-col items-center justify-center w-1/3 bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-6 border border-[var(--color-border)]">
-        <h2 className="text-xl font-bold mb-4">Honest Friend</h2>
+      <div className="flex flex-col items-center justify-center w-full md:w-1/3 bg-[var(--color-bg-secondary)] backdrop-blur-lg rounded-xl p-4 md:p-6 border border-[var(--color-border)]">
+        <h2 className="text-xl font-bold mb-2 md:mb-4">Honest Friend</h2>
         <model-viewer
             ref={modelViewerRef}
-            src="https://modelviewer.dev/shared-assets/models/RobotExpressive.glb"
+            src="https://cdn.glitch.global/6a56f40a-513c-42b7-9a5c-7557d383842c/a-beautiful-anime-girl.glb?v=1644788876882"
             alt="AI Assistant"
             animation-name="Idle"
             camera-controls
             disable-zoom
-            style={{width: '100%', height: '300px', backgroundColor: 'transparent'}}
+            style={{width: '100%', height: '200px', backgroundColor: 'transparent'}}
         ></model-viewer>
-        <p className="text-sm text-center text-[var(--color-text-secondary)] mt-4">
+        <p className="text-sm text-center text-[var(--color-text-secondary)] mt-2 md:mt-4">
             I'm here to listen and help. What's on your mind, {settings.userName || 'friend'}?
         </p>
       </div>
